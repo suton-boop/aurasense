@@ -111,6 +111,11 @@ try {
 
     // === PRODUCTS ===
     elseif ($method === 'GET' && $path === '/products') {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN is_active TINYINT(1) DEFAULT 1");
+        } catch (Exception $e) {
+            // Column already exists or other error, ignore
+        }
         $stmt = $pdo->query('SELECT * FROM products');
         $products = $stmt->fetchAll();
         foreach ($products as &$p) {
