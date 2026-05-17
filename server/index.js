@@ -31,12 +31,12 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ url: imageUrl });
 });
 
-// MySQL Connection Pool
+
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'aurasense',
+  user: 'u122685751_aurasense',
+  password: '@Talita31102014#',
+  database: 'u122685751_aurasense',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
