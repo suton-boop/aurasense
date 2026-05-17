@@ -121,26 +121,28 @@ try {
     elseif ($method === 'POST' && $path === '/products') {
         $id = !empty($input['id']) ? $input['id'] : 'PRD' . substr((string)time(), -4);
         $prices = isset($input['prices']) ? json_encode($input['prices']) : '[]';
+        $is_active = isset($input['is_active']) ? $input['is_active'] : 1;
         
-        $stmt = $pdo->prepare("INSERT INTO products (id, brand, variant, category, bottle_capacity, stock_ml, image, note, prices, capital_price, barcode, aroma_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO products (id, brand, variant, category, bottle_capacity, stock_ml, image, note, prices, capital_price, barcode, aroma_category, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $id, $input['brand'] ?? '', $input['variant'] ?? '', $input['category'] ?? '', 
             $input['bottle_capacity'] ?? null, $input['stock_ml'] ?? 0, $input['image'] ?? '', 
             $input['note'] ?? '', $prices, $input['capital_price'] ?? 0, 
-            $input['barcode'] ?? '', $input['aroma_category'] ?? ''
+            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $is_active
         ]);
         jsonResponse(['success' => true]);
     }
     elseif ($method === 'PUT' && preg_match('/^\/products\/(.+)$/', $path, $matches)) {
         $id = $matches[1];
         $prices = isset($input['prices']) ? json_encode($input['prices']) : '[]';
+        $is_active = isset($input['is_active']) ? $input['is_active'] : 1;
         
-        $stmt = $pdo->prepare("UPDATE products SET brand=?, variant=?, category=?, bottle_capacity=?, stock_ml=?, image=?, note=?, prices=?, capital_price=?, barcode=?, aroma_category=? WHERE id=?");
+        $stmt = $pdo->prepare("UPDATE products SET brand=?, variant=?, category=?, bottle_capacity=?, stock_ml=?, image=?, note=?, prices=?, capital_price=?, barcode=?, aroma_category=?, is_active=? WHERE id=?");
         $stmt->execute([
             $input['brand'] ?? '', $input['variant'] ?? '', $input['category'] ?? '', 
             $input['bottle_capacity'] ?? null, $input['stock_ml'] ?? 0, $input['image'] ?? '', 
             $input['note'] ?? '', $prices, $input['capital_price'] ?? 0, 
-            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $id
+            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $is_active, $id
         ]);
         jsonResponse(['success' => true]);
     }
