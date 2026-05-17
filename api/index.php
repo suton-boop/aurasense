@@ -160,6 +160,39 @@ try {
         }
         jsonResponse($transactions);
     }
+    elseif ($method === 'DELETE' && preg_match('/^\/transactions\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("SELECT * FROM transactions WHERE id = ?");
+        $stmt->execute([$id]);
+        $transaction = $stmt->fetch();
+        
+        if ($transaction) {
+            $items = is_string($transaction['items']) ? json_decode($transaction['items'], true) : [];
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $qty = $item['quantity'] ?? 1;
+                    $size = $item['selected_size'] ?? 1;
+                    $total_ml = $qty * $size;
+                    
+                    $stmtUpdate = $pdo->prepare('UPDATE products SET stock_ml = stock_ml + ? WHERE id = ?');
+                    $stmtUpdate->execute([$total_ml, $item['id']]);
+                    
+                    $stmtUpdateSup = $pdo->prepare('UPDATE supplies SET stock_qty = stock_qty + ? WHERE type = "botol" AND size_ml = ?');
+                    $stmtUpdateSup->execute([$qty, $size]);
+                }
+            }
+            $pdo->exec('UPDATE supplies SET stock_qty = stock_qty + 1 WHERE id IN ("SUP_PLSTK", "SUP_STIKER")');
+            
+            $stmtDel = $pdo->prepare("DELETE FROM transactions WHERE id = ?");
+            $stmtDel->execute([$id]);
+        }
+        
+        $pdo->commit();
+        jsonResponse(['success' => true]);
+    }
     elseif ($method === 'POST' && $path === '/transactions') {
         $transaction = $input;
         $id = (string)time();
