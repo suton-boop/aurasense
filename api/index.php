@@ -52,6 +52,38 @@ try {
         }
     }
 
+    // === USERS ===
+    elseif ($method === 'GET' && $path === '/users') {
+        $stmt = $pdo->query('SELECT id, username, role FROM users');
+        jsonResponse($stmt->fetchAll());
+    }
+    elseif ($method === 'POST' && $path === '/users') {
+        $stmt = $pdo->prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
+        $stmt->execute([
+            $input['username'] ?? '',
+            $input['password'] ?? '',
+            $input['role'] ?? 'ADMIN'
+        ]);
+        jsonResponse(['success' => true]);
+    }
+    elseif ($method === 'PUT' && preg_match('/^\/users\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        if (!empty($input['password'])) {
+            $stmt = $pdo->prepare('UPDATE users SET username=?, password=?, role=? WHERE id=?');
+            $stmt->execute([$input['username'] ?? '', $input['password'], $input['role'] ?? 'ADMIN', $id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE users SET username=?, role=? WHERE id=?');
+            $stmt->execute([$input['username'] ?? '', $input['role'] ?? 'ADMIN', $id]);
+        }
+        jsonResponse(['success' => true]);
+    }
+    elseif ($method === 'DELETE' && preg_match('/^\/users\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        jsonResponse(['success' => true]);
+    }
+
     // === UPLOAD ===
     elseif ($method === 'POST' && $path === '/upload') {
         if (!isset($_FILES['image'])) {
