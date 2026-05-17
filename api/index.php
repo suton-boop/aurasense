@@ -62,7 +62,7 @@ try {
         $stmt->execute([
             $input['username'] ?? '',
             $input['password'] ?? '',
-            $input['role'] ?? 'ADMIN'
+            $input['role'] ?? 'Operator'
         ]);
         jsonResponse(['success' => true]);
     }
@@ -70,10 +70,10 @@ try {
         $id = $matches[1];
         if (!empty($input['password'])) {
             $stmt = $pdo->prepare('UPDATE users SET username=?, password=?, role=? WHERE id=?');
-            $stmt->execute([$input['username'] ?? '', $input['password'], $input['role'] ?? 'ADMIN', $id]);
+            $stmt->execute([$input['username'] ?? '', $input['password'], $input['role'] ?? 'Operator', $id]);
         } else {
             $stmt = $pdo->prepare('UPDATE users SET username=?, role=? WHERE id=?');
-            $stmt->execute([$input['username'] ?? '', $input['role'] ?? 'ADMIN', $id]);
+            $stmt->execute([$input['username'] ?? '', $input['role'] ?? 'Operator', $id]);
         }
         jsonResponse(['success' => true]);
     }
