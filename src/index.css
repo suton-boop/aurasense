@@ -361,3 +361,92 @@ tr:hover td {
 .text-10 {
   font-size: 10px;
 }
+
+.mobile-cart-sticky {
+  display: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 280px !important;
+    background: var(--bg-primary) !important;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+    z-index: 1000 !important;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 80px 16px 20px 16px !important;
+    width: 100% !important;
+  }
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+  .mobile-cart-sticky {
+    display: block !important;
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    z-index: 99;
+  }
+  .grid-cols-1, .grid-cols-2, .grid-cols-3, .grid-cols-4, .md\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+  /* Specific grids like prices shouldn't stack vertically */
+  .grid-cols-5 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .h-pos {
+    height: auto !important;
+    flex-direction: column-reverse !important;
+  }
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  }
+  .modal-content-lg, .modal-content-md, .modal-content-sm, .glass[style*="width"] {
+    width: 95vw !important;
+    padding: 1.5rem !important;
+    max-height: 80vh !important;
+  }
+  .mobile-header {
+    display: flex !important;
+  }
+}
+
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 900;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.overlay-bg {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  display: none;
+  transition: opacity 0.3s ease;
+}
+
+.overlay-bg.open {
+  display: block;
+}

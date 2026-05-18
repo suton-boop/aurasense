@@ -15,14 +15,19 @@ import {
   Truck,
   LogOut,
   User,
+  Users,
   Lock,
   Inbox,
-  Database
+  Database,
+  Menu,
+  ArrowLeft,
+  Download
 } from 'lucide-react';
+import PublicStore from './PublicStore';
 
 // --- Components ---
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, onBackToStore }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -46,9 +51,17 @@ const Login = ({ onLogin }) => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass p-12 w-full max-w-md text-center"
+        className="glass p-12 w-full max-w-md text-center relative"
       >
-        <div className="mb-8">
+        <button 
+          onClick={onBackToStore}
+          className="absolute top-6 left-6 p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition-colors"
+          title="Kembali ke Toko"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
+        <div className="mb-8 mt-4">
           <img src="/logo aurasense.png" alt="Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
           <h1 className="text-3xl font-bold gold-text">AURASENSE</h1>
           <p className="text-xs text-slate-500 uppercase tracking-widest mt-2">Admin Portal Login</p>
@@ -110,6 +123,192 @@ const Login = ({ onLogin }) => {
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from './db';
 
+// --- Print Invoice Utility ---
+export const printInvoice = (invoice) => {
+  const printWindow = window.open('', '_blank');
+  
+  const itemsHtml = invoice.items.map(item => `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px dashed #ccc;">
+        <div><strong>${item.variant}</strong></div>
+        <div style="font-size: 10px; color: #666;">${item.brand} • ${item.selected_size}ml</div>
+      </td>
+      <td style="padding: 8px 0; border-bottom: 1px dashed #ccc; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px 0; border-bottom: 1px dashed #ccc; text-align: right;">Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <html>
+      <head>
+        <title>Invoice - ${invoice.transaction_id}</title>
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; color: #000; margin: 0; padding: 20px; font-size: 12px; }
+          .container { width: 100%; max-width: 300px; margin: 0 auto; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
+          .header h1 { margin: 0; font-size: 20px; font-weight: bold; }
+          .header p { margin: 2px 0; }
+          .details { margin-bottom: 20px; }
+          .details div { display: flex; justify-content: space-between; margin-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { text-align: left; padding-bottom: 8px; border-bottom: 2px dashed #000; font-weight: bold; }
+          .totals { border-top: 2px dashed #000; padding-top: 10px; }
+          .totals div { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; }
+          .footer { text-align: center; margin-top: 30px; font-size: 10px; border-top: 1px dashed #000; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>AURASENSE</h1>
+            <p>Decant Parfum Premium</p>
+          </div>
+          <div class="details">
+            <div><span>ID:</span> <span>${invoice.transaction_id}</span></div>
+            <div><span>Tgl:</span> <span>${new Date(invoice.timestamp).toLocaleString('id-ID')}</span></div>
+            <div><span>Pelanggan:</span> <span>${invoice.customer_name || '-'}</span></div>
+            <div><span>Metode:</span> <span>${invoice.payment_method}</span></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          <div class="totals">
+            <div><span>Ongkir (${invoice.shipping_type || '-'})</span> <span>Rp ${Number(invoice.shipping_cost || 0).toLocaleString('id-ID')}</span></div>
+            <div style="font-size: 14px; margin-top: 8px;"><span>TOTAL</span> <span>Rp ${Number(invoice.total_amount).toLocaleString('id-ID')}</span></div>
+          </div>
+          <div class="footer">
+            <p>Terima kasih atas belanja Anda!</p>
+            <p>@aurasense.id</p>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          }
+        </script>
+      </body>
+    </html>
+  `;
+  
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
+export const downloadInvoiceImage = (invoice) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 400;
+  canvas.height = 800 + (invoice.items.length * 50);
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Text settings
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AURASENSE', 200, 40);
+  
+  ctx.font = '14px monospace';
+  ctx.fillText('Decant Parfum Premium', 200, 60);
+  
+  // Dotted line
+  ctx.fillText('--------------------------------------', 200, 80);
+
+  // Details
+  ctx.textAlign = 'left';
+  ctx.font = '14px monospace';
+  ctx.fillText(`ID       : ${invoice.transaction_id}`, 20, 110);
+  ctx.fillText(`Tanggal  : ${new Date(invoice.timestamp).toLocaleString('id-ID')}`, 20, 130);
+  ctx.fillText(`Pelanggan: ${invoice.customer_name}`, 20, 150);
+  ctx.fillText(`Metode   : ${invoice.payment_method}`, 20, 170);
+
+  ctx.textAlign = 'center';
+  ctx.fillText('--------------------------------------', 200, 190);
+
+  // Items
+  ctx.textAlign = 'left';
+  ctx.fillText('Item', 20, 210);
+  ctx.textAlign = 'center';
+  ctx.fillText('Qty', 260, 210);
+  ctx.textAlign = 'right';
+  ctx.fillText('Subtotal', 380, 210);
+
+  ctx.textAlign = 'center';
+  ctx.fillText('--------------------------------------', 200, 230);
+
+  let y = 250;
+  invoice.items.forEach(item => {
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(`${item.variant}`, 20, y);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#666666';
+    ctx.fillText(`${item.brand} • ${item.selected_size}ml`, 20, y + 15);
+    
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.font = '14px monospace';
+    ctx.fillText(`${item.quantity}`, 260, y + 8);
+    
+    ctx.textAlign = 'right';
+    ctx.fillText(`Rp ${(item.price * item.quantity).toLocaleString('id-ID')}`, 380, y + 8);
+    
+    y += 40;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.fillText('--------------------------------------', 200, y);
+  y += 20;
+
+  // Totals
+  ctx.textAlign = 'left';
+  ctx.fillText(`Ongkir (${invoice.shipping_type || '-'})`, 20, y);
+  ctx.textAlign = 'right';
+  ctx.fillText(`Rp ${Number(invoice.shipping_cost || 0).toLocaleString('id-ID')}`, 380, y);
+  
+  y += 30;
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`TOTAL`, 20, y);
+  ctx.textAlign = 'right';
+  ctx.fillText(`Rp ${Number(invoice.total_amount).toLocaleString('id-ID')}`, 380, y);
+
+  y += 20;
+  ctx.textAlign = 'center';
+  ctx.font = '14px monospace';
+  ctx.fillText('--------------------------------------', 200, y);
+
+  y += 30;
+  ctx.fillText('Terima kasih atas pesanan Anda!', 200, y);
+  y += 20;
+  ctx.fillText('@aurasense.id', 200, y);
+
+  // Resize canvas to exact height
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = 400;
+  finalCanvas.height = y + 30;
+  const fCtx = finalCanvas.getContext('2d');
+  fCtx.drawImage(canvas, 0, 0);
+
+  // Download logic
+  const link = document.createElement('a');
+  link.download = `Invoice_Aurasense_${invoice.transaction_id}.png`;
+  link.href = finalCanvas.toDataURL('image/png');
+  link.click();
+};
+
 // --- Helper Components ---
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <div 
@@ -144,13 +343,17 @@ const Card = ({ children, className = "" }) => (
 // --- Main Pages ---
 
 const Dashboard = ({ products, transactions, supplies }) => {
-  const totalSales = transactions.reduce((acc, curr) => acc + curr.total_amount, 0);
+  const [showAllStock, setShowAllStock] = useState(false);
+
+  const totalSales = transactions.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
   const totalTransactions = transactions.length;
   
-  const lowStockProducts = products.filter(p => p.stock_ml < 20);
-  const lowStockSupplies = supplies ? supplies.filter(s => s.stock_qty <= s.min_stock) : [];
+  const lowStockProducts = products.filter(p => p.stock_ml < 20).map(p => ({ ...p, type: 'product' }));
+  const lowStockSupplies = supplies ? supplies.filter(s => s.stock_qty <= s.min_stock).map(s => ({ ...s, type: 'supply' })) : [];
   
-  const lowStock = lowStockProducts.length + lowStockSupplies.length;
+  const allLowStockItems = [...lowStockProducts, ...lowStockSupplies];
+  const lowStock = allLowStockItems.length;
+  const displayedLowStock = showAllStock ? allLowStockItems : allLowStockItems.slice(0, 5);
 
   return (
     <div className="fade-in">
@@ -161,7 +364,7 @@ const Dashboard = ({ products, transactions, supplies }) => {
             <span className="text-slate-400 text-sm">Total Penjualan</span>
             <div className="bg-amber-500/10 p-2 rounded-lg text-amber-500"><BarChart3 size={20} /></div>
           </div>
-          <h2 className="text-2xl font-bold text-white">Rp {totalSales.toLocaleString()}</h2>
+          <h2 className="text-2xl font-bold text-white">Rp {totalSales.toLocaleString('id-ID')}</h2>
         </Card>
         <Card>
           <div className="flex justify-between items-center mb-2">
@@ -195,7 +398,7 @@ const Dashboard = ({ products, transactions, supplies }) => {
                 <tr key={t.id} className="border-t border-slate-700/50">
                   <td className="p-3 text-sm text-slate-200">{t.transaction_id}</td>
                   <td className="p-3 text-sm text-white font-medium">{t.customer_name}</td>
-                  <td className="p-3 text-sm text-amber-400 font-bold">Rp {t.total_amount.toLocaleString()}</td>
+                  <td className="p-3 text-sm text-amber-400 font-bold">Rp {Number(t.total_amount).toLocaleString('id-ID')}</td>
                 </tr>
               ))}
               {transactions.length === 0 && (
@@ -210,25 +413,35 @@ const Dashboard = ({ products, transactions, supplies }) => {
             <Package size={18} /> Daftar Stok Menipis
           </h3>
           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {lowStockProducts.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            {displayedLowStock.map((item, idx) => (
+              <div key={item.id + idx} className="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <div>
-                  <p className="text-sm font-bold text-white">{p.variant} <span className="text-xs text-slate-400">({p.brand})</span></p>
-                  <p className="text-[10px] text-slate-500">Parfum / Cairan</p>
+                  <p className="text-sm font-bold text-white">{item.type === 'product' ? item.variant : item.name} {item.type === 'product' && <span className="text-xs text-slate-400">({item.brand})</span>}</p>
+                  <p className="text-[10px] text-slate-500">{item.type === 'product' ? 'Parfum / Cairan' : 'Supply / Botol'}</p>
                 </div>
-                <span className="text-xs font-bold text-red-500">{p.stock_ml} ml</span>
+                <span className="text-xs font-bold text-red-500">{item.type === 'product' ? `${Math.round(item.stock_ml)} ml` : `${item.stock_qty} pcs`}</span>
               </div>
             ))}
-            {lowStockSupplies.map(s => (
-              <div key={s.id} className="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <div>
-                  <p className="text-sm font-bold text-white">{s.name}</p>
-                  <p className="text-[10px] text-slate-500">Supply / Botol</p>
-                </div>
-                <span className="text-xs font-bold text-red-500">{s.stock_qty} pcs</span>
-              </div>
-            ))}
-            {(lowStockProducts.length === 0 && lowStockSupplies.length === 0) && (
+            
+            {allLowStockItems.length > 5 && !showAllStock && (
+              <button 
+                onClick={() => setShowAllStock(true)}
+                className="w-full mt-2 py-2 text-xs font-bold text-amber-500 border border-amber-500/50 rounded-lg hover:bg-amber-500/10 transition-colors"
+              >
+                Lihat Lebih Banyak ({allLowStockItems.length - 5} lainnya)
+              </button>
+            )}
+
+            {showAllStock && allLowStockItems.length > 5 && (
+              <button 
+                onClick={() => setShowAllStock(false)}
+                className="w-full mt-2 py-2 text-xs font-bold text-slate-400 border border-slate-700 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Tutup Sebagian
+              </button>
+            )}
+
+            {allLowStockItems.length === 0 && (
               <div className="flex flex-col items-center justify-center p-8 text-slate-500">
                 <Package size={40} className="mb-2 opacity-20" />
                 <p className="text-sm">Semua stok dalam kondisi aman.</p>
@@ -247,13 +460,13 @@ const MasterProduct = ({ products, onUpdate }) => {
   const [formData, setFormData] = useState({
     id: '', brand: '', variant: '', category: 'EDP', bottle_capacity: 100, stock_ml: 0, image: '', note: '',
     price_1: 0, price_2: 0, price_3: 0, price_5: 0, price_7: 0, price_10: 0,
-    capital_price: 0, barcode: '', aroma_category: ''
+    capital_price: 0, barcode: '', aroma_category: '', is_active: 1
   });
 
   const handleOpenAdd = () => {
     const newId = 'PRD' + Date.now().toString().slice(-4);
     setEditingId(null);
-    setFormData({ id: newId, brand: '', variant: '', category: 'EDP', bottle_capacity: 100, stock_ml: 0, image: '', note: '', price_2: 0, price_3: 0, price_5: 0, price_7: 0, price_10: 0, capital_price: 0, barcode: '', aroma_category: '' });
+    setFormData({ id: newId, brand: '', variant: '', category: 'EDP', bottle_capacity: 100, stock_ml: 0, image: '', note: '', price_2: 0, price_3: 0, price_5: 0, price_7: 0, price_10: 0, capital_price: 0, barcode: '', aroma_category: '', is_active: 1 });
     setShowModal(true);
   };
 
@@ -286,7 +499,7 @@ const MasterProduct = ({ products, onUpdate }) => {
     setFormData({
       id: p.id, brand: p.brand || '', variant: p.variant || '', category: p.category || '', bottle_capacity: p.bottle_capacity || 100, stock_ml: p.stock_ml || 0, image: p.image || '', note: p.note || '',
       price_2: p.prices?.[2] || 0, price_3: p.prices?.[3] || 0, price_5: p.prices?.[5] || 0, price_7: p.prices?.[7] || 0, price_10: p.prices?.[10] || 0,
-      capital_price: p.capital_price || 0, barcode: p.barcode || '', aroma_category: p.aroma_category || ''
+      capital_price: p.capital_price || 0, barcode: p.barcode || '', aroma_category: p.aroma_category || '', is_active: p.is_active !== undefined ? Number(p.is_active) : 1
     });
     setShowModal(true);
   };
@@ -319,7 +532,7 @@ const MasterProduct = ({ products, onUpdate }) => {
     const payload = {
       id: formData.id, brand: formData.brand, variant: formData.variant, category: formData.category, bottle_capacity: Number(formData.bottle_capacity), stock_ml: Number(formData.stock_ml), image: formData.image, note: formData.note,
       prices: { 2: Number(formData.price_2), 3: Number(formData.price_3), 5: Number(formData.price_5), 7: Number(formData.price_7), 10: Number(formData.price_10) },
-      capital_price: Number(formData.capital_price), barcode: formData.barcode, aroma_category: formData.aroma_category
+      capital_price: Number(formData.capital_price), barcode: formData.barcode, aroma_category: formData.aroma_category, is_active: formData.is_active
     };
 
     let res;
@@ -352,6 +565,7 @@ const MasterProduct = ({ products, onUpdate }) => {
                 <th className="p-4 text-left text-slate-400">Produk</th>
                 <th className="p-4 text-left text-slate-400">Kategori Aroma</th>
                 <th className="p-4 text-left text-slate-400">Harga Modal</th>
+                <th className="p-4 text-left text-slate-400">Status</th>
                 <th className="p-4 text-left text-slate-400">Aksi</th>
               </tr>
             </thead>
@@ -369,7 +583,12 @@ const MasterProduct = ({ products, onUpdate }) => {
                     </div>
                   </td>
                   <td className="p-4 text-sm text-slate-200">{p.aroma_category || '-'}</td>
-                  <td className="p-4 text-sm text-slate-200">Rp {Number(p.capital_price || 0).toLocaleString()}</td>
+                  <td className="p-4 text-sm text-slate-200">Rp {Number(p.capital_price || 0).toLocaleString('id-ID')}</td>
+                  <td className="p-4 text-sm">
+                    <span className={`px-2 py-1 rounded-lg text-xs ${p.is_active != 0 && p.is_active !== '0' && p.is_active !== false ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'}`}>
+                      {p.is_active != 0 && p.is_active !== '0' && p.is_active !== false ? 'Aktif' : 'Tidak Aktif'}
+                    </span>
+                  </td>
                   <td className="p-4 text-sm">
                     <div className="flex gap-3">
                       <button onClick={() => handleOpenEdit(p)} className="flex items-center gap-1 text-slate-400 hover:text-amber-500 transition-colors">
@@ -428,6 +647,13 @@ const MasterProduct = ({ products, onUpdate }) => {
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Stok Awal (ml)</label>
                   <input required type="number" step="0.1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white" value={formData.stock_ml} onChange={e => setFormData({...formData, stock_ml: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Status Penjualan (Tampil di Kasir)</label>
+                  <select className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500" value={formData.is_active} onChange={e => setFormData({...formData, is_active: Number(e.target.value)})}>
+                    <option value={1}>Aktif (Dijual)</option>
+                    <option value={0}>Tidak Aktif (Disembunyikan)</option>
+                  </select>
                 </div>
               </div>
               
@@ -529,11 +755,11 @@ const IncomingItems = ({ products, onUpdate }) => {
                   </td>
                   <td className="p-4 text-sm">
                     <span className={`px-2 py-1 rounded-lg ${p.stock_ml < 20 ? 'bg-red-500/10 text-red-500' : 'bg-slate-700 text-slate-200'}`}>
-                      {p.stock_ml} ml
+                      {Math.round(p.stock_ml)} ml
                     </span>
                   </td>
                   <td className="p-4 text-sm text-slate-200">
-                    {Math.floor(Number(p.stock_ml) / (Number(p.bottle_capacity) || 100))} Botol ({(Number(p.stock_ml) % (Number(p.bottle_capacity) || 100)).toFixed(1)} ml sisa)
+                    {Math.floor(Number(p.stock_ml) / (Number(p.bottle_capacity) || 100))} Botol ({Math.round(Number(p.stock_ml) % (Number(p.bottle_capacity) || 100))} ml sisa)
                   </td>
                 </tr>
               ))}
@@ -573,7 +799,24 @@ const IncomingItems = ({ products, onUpdate }) => {
   );
 };
 
-const Inventory = ({ products }) => {
+const Inventory = ({ products, onUpdate, user }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [newStock, setNewStock] = useState('');
+
+  const handleEditClick = (product) => {
+    setEditingProduct(product);
+    setNewStock(product.stock_ml);
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    if (editingProduct && newStock !== '') {
+      await db.updateProduct(editingProduct.id, { ...editingProduct, stock_ml: Number(newStock) });
+      setShowModal(false);
+      onUpdate();
+    }
+  };
   return (
     <div className="fade-in">
       <div className="flex justify-between items-center mb-8">
@@ -589,6 +832,7 @@ const Inventory = ({ products }) => {
               <th className="p-4 text-left text-slate-400">Harga (1ml - 10ml)</th>
               <th className="p-4 text-left text-slate-400">Stok (ml)</th>
               <th className="p-4 text-left text-slate-400">Botol Sisa</th>
+              {user?.role?.toLowerCase() === 'superadmin' && <th className="p-4 text-right text-slate-400">Aksi</th>}
             </tr>
           </thead>
           <tbody>
@@ -606,21 +850,50 @@ const Inventory = ({ products }) => {
                 </td>
                 <td className="p-4 text-sm text-slate-200">{p.category}</td>
                 <td className="p-4 text-sm text-amber-400 font-medium">
-                  {p.prices ? `Rp ${p.prices[1]?.toLocaleString()} - ${p.prices[10]?.toLocaleString()}` : 'N/A'}
+                  {p.prices ? `Rp ${p.prices[1]?.toLocaleString('id-ID')} - ${p.prices[10]?.toLocaleString('id-ID')}` : 'N/A'}
                 </td>
                 <td className="p-4 text-sm">
                   <span className={`px-2 py-1 rounded-lg ${p.stock_ml < 20 ? 'bg-red-500/10 text-red-500' : 'bg-slate-700 text-slate-200'}`}>
-                    {p.stock_ml} ml
+                    {Math.round(p.stock_ml)} ml
                   </span>
                 </td>
                 <td className="p-4 text-sm text-slate-200">
-                  {Math.floor(Number(p.stock_ml) / (Number(p.bottle_capacity) || 100))} Botol ({(Number(p.stock_ml) % (Number(p.bottle_capacity) || 100)).toFixed(1)} ml sisa)
+                  {Math.floor(Number(p.stock_ml) / (Number(p.bottle_capacity) || 100))} Botol ({Math.round(Number(p.stock_ml) % (Number(p.bottle_capacity) || 100))} ml sisa)
                 </td>
+                {user?.role?.toLowerCase() === 'superadmin' && (
+                  <td className="p-4 text-right">
+                    <button onClick={() => handleEditClick(p)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
+                      <Edit size={16} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+
+      {showModal && (
+        <div className="modal-overlay z-1000" style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <div className="glass" style={{ width: '400px', maxWidth: '95vw', padding: '2.5rem', borderRadius: '16px', position: 'relative' }}>
+            <h2 className="text-xl font-bold mb-4 gold-text">Edit Stok Fisik</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Produk</label>
+                <input readOnly type="text" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-slate-500 cursor-not-allowed" value={`${editingProduct?.variant} (${editingProduct?.brand})`} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Stok Fisik Saat Ini (ml)</label>
+                <input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500" value={newStock} onChange={e => setNewStock(e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-700/50">
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline px-6 py-2">Batal</button>
+                <button type="button" onClick={handleSave} className="btn btn-primary px-6 py-2">Simpan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -658,7 +931,7 @@ const POS = ({ products, supplies, onSale }) => {
     const totalMlRequested = currentTotalMlInCart + size;
 
     if (totalMlRequested > product.stock_ml) {
-      alert(`Stok parfum tidak mencukupi! Sisa stok parfum: ${product.stock_ml}ml.`);
+      alert(`Stok parfum tidak mencukupi! Sisa stok parfum: ${Math.round(product.stock_ml)}ml.`);
       return;
     }
 
@@ -700,7 +973,7 @@ const POS = ({ products, supplies, onSale }) => {
         .reduce((sum, c) => sum + (c.quantity * c.selected_size), 0);
       
       if (totalMlInCart > product.stock_ml) {
-        alert(`Gagal! Stok ${product.variant} tidak mencukupi (${product.stock_ml}ml tersedia).`);
+        alert(`Gagal! Stok ${product.variant} tidak mencukupi (${Math.round(product.stock_ml)}ml tersedia).`);
         return;
       }
     }
@@ -731,12 +1004,24 @@ const POS = ({ products, supplies, onSale }) => {
   };
 
   return (
-    <div className="flex gap-6 h-pos fade-in">
+    <div className="flex gap-6 h-pos fade-in relative">
+      {/* Mobile Sticky Cart Button */}
+      {cart.length > 0 && (
+        <div className="mobile-cart-sticky">
+          <button 
+            onClick={() => document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' })}
+            className="btn btn-primary w-full justify-center py-3 text-sm font-bold shadow-2xl"
+          >
+            <ShoppingCart size={18} /> Lanjut Bayar ({cart.length} Item) - Rp {total.toLocaleString('id-ID')}
+          </button>
+        </div>
+      )}
+
       {/* Product List */}
-      <div className="flex-1 overflow-y-auto pr-4">
+      <div className="flex-1 overflow-y-auto pr-4 pb-20">
         <h1 className="text-3xl font-bold mb-8 gold-text">Penjualan (POS)</h1>
         <div className="product-grid">
-          {products.map(p => (
+          {products.filter(p => p.is_active != 0 && p.is_active !== '0' && p.is_active !== false).map(p => (
             <Card key={p.id} className="product-card !p-0">
               <img src={p.image} className="product-image" />
               <div className="p-4">
@@ -780,9 +1065,9 @@ const POS = ({ products, supplies, onSale }) => {
                     <>
                       <div className="flex justify-between items-center mb-4">
                         <p className="text-amber-400 font-bold">
-                          Rp {currentPrice.toLocaleString()}
+                          Rp {currentPrice.toLocaleString('id-ID')}
                         </p>
-                        <p className="text-[10px] text-slate-500">{p.stock_ml}ml tersedia</p>
+                        <p className="text-[10px] text-slate-500">{Math.round(p.stock_ml)}ml tersedia</p>
                       </div>
 
                       <button 
@@ -802,7 +1087,7 @@ const POS = ({ products, supplies, onSale }) => {
       </div>
 
       {/* Cart Side */}
-      <div style={{ width: '400px' }}>
+      <div id="cart-section" className="cart-side" style={{ width: '400px' }}>
         <Card className="h-full flex flex-col">
           <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
             <ShoppingCart size={20} className="text-amber-500" /> Keranjang
@@ -834,10 +1119,10 @@ const POS = ({ products, supplies, onSale }) => {
                   >
                     <div>
                       <p className="font-bold text-white text-sm">{item.variant} <span className="text-amber-500">({item.selected_size}ml)</span></p>
-                      <p className="text-xs text-slate-400">{item.quantity}x @ Rp {item.price.toLocaleString()}</p>
+                      <p className="text-xs text-slate-400">{item.quantity}x @ Rp {item.price.toLocaleString('id-ID')}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <p className="text-sm font-bold text-white">Rp {(item.price * item.quantity).toLocaleString()}</p>
+                      <p className="text-sm font-bold text-white">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</p>
                       <button onClick={() => removeFromCart(item.cartKey)} className="text-red-500 opacity-50 hover:opacity-100">
                         <Trash2 size={16} />
                       </button>
@@ -876,15 +1161,15 @@ const POS = ({ products, supplies, onSale }) => {
 
             <div className="flex justify-between text-slate-400 text-sm">
               <span>Subtotal</span>
-              <span>Rp {subtotal.toLocaleString()}</span>
+              <span>Rp {subtotal.toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between text-slate-400 text-sm">
               <span>Ongkir</span>
-              <span>Rp {Number(shippingCost).toLocaleString()}</span>
+              <span>Rp {Number(shippingCost).toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between items-end">
               <span className="font-bold">Total</span>
-              <span className="text-2xl font-bold gold-text">Rp {total.toLocaleString()}</span>
+              <span className="text-2xl font-bold gold-text">Rp {total.toLocaleString('id-ID')}</span>
             </div>
 
             <div className="space-y-2 py-4">
@@ -915,11 +1200,12 @@ const POS = ({ products, supplies, onSale }) => {
 
       {/* Invoice Modal */}
       {showCheckout && lastInvoice && (
-        <div className="modal-overlay z-50">
+        <div className="modal-overlay z-1000" style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="modal-content glass modal-content-sm p-8"
+            style={{ maxHeight: '85vh', overflowY: 'auto' }}
           >
             <div className="text-center mb-8">
               <div className="inline-block p-4 rounded-full bg-green-500/10 text-green-500 mb-4">
@@ -946,23 +1232,24 @@ const POS = ({ products, supplies, onSale }) => {
                 {lastInvoice.items.map(item => (
                   <div key={item.id} className="flex justify-between mb-2">
                     <span>{item.variant} x {item.quantity}</span>
-                    <span>Rp {(item.price * item.quantity).toLocaleString()}</span>
+                    <span>Rp {(item.price * item.quantity).toLocaleString('id-ID')}</span>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Ongkir ({lastInvoice.shipping_type})</span>
-                <span>Rp {lastInvoice.shipping_cost.toLocaleString()}</span>
+                <span>Rp {lastInvoice.shipping_cost.toLocaleString('id-ID')}</span>
               </div>
               <div className="border-t border-slate-700 pt-4 flex justify-between font-bold text-lg">
                 <span>TOTAL</span>
-                <span className="text-amber-500">Rp {lastInvoice.total_amount.toLocaleString()}</span>
+                <span className="text-amber-500">Rp {Number(lastInvoice.total_amount).toLocaleString('id-ID')}</span>
               </div>
             </div>
 
             <div className="flex gap-4">
               <button onClick={() => setShowCheckout(false)} className="flex-1 btn btn-outline justify-center">Tutup</button>
-              <button className="flex-1 btn btn-primary justify-center"><Printer size={18} /> Cetak Invoice</button>
+              <button onClick={() => downloadInvoiceImage(lastInvoice)} className="flex-1 btn btn-primary justify-center bg-emerald-600 hover:bg-emerald-500 text-white border-none"><Download size={18} /> Unduh Gambar</button>
+              <button onClick={() => printInvoice(lastInvoice)} className="flex-1 btn btn-primary justify-center"><Printer size={18} /> Cetak Struk</button>
             </div>
           </motion.div>
         </div>
@@ -971,7 +1258,7 @@ const POS = ({ products, supplies, onSale }) => {
   );
 };
 
-const Reports = ({ transactions, expenses }) => {
+const Reports = ({ transactions, expenses, user }) => {
   const [filterType, setFilterType] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -1061,24 +1348,24 @@ const Reports = ({ transactions, expenses }) => {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-t-4 border-t-blue-500">
           <h3 className="text-slate-400 text-xs mb-2">Total Pendapatan</h3>
-          <p className="text-2xl font-bold text-white">Rp {totalRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">Rp {totalRevenue.toLocaleString('id-ID')}</p>
         </Card>
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-t-4 border-t-red-500">
           <h3 className="text-slate-400 text-xs mb-2">Total Modal (HPP)</h3>
-          <p className="text-2xl font-bold text-white">Rp {Math.round(totalCOGS).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">Rp {Math.round(totalCOGS).toLocaleString('id-ID')}</p>
         </Card>
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-t-4 border-t-orange-500">
           <h3 className="text-slate-400 text-xs mb-2">Total Pengeluaran</h3>
-          <p className="text-2xl font-bold text-white">Rp {totalExpenses.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">Rp {totalExpenses.toLocaleString('id-ID')}</p>
         </Card>
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-t-4 border-t-green-500">
           <h3 className="text-slate-400 text-xs mb-2">Laba Bersih Final</h3>
-          <p className="text-2xl font-bold text-green-400">Rp {Math.round(netProfit).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-green-400">Rp {Math.round(netProfit).toLocaleString('id-ID')}</p>
         </Card>
       </div>
 
-      <Card>
-        <table className="w-full">
+      <Card className="overflow-x-auto">
+        <table className="w-full" style={{ minWidth: '600px' }}>
           <thead>
             <tr>
               <th className="p-4 text-left text-slate-400">Tanggal</th>
@@ -1087,6 +1374,7 @@ const Reports = ({ transactions, expenses }) => {
               <th className="p-4 text-left text-slate-400">Produk</th>
               <th className="p-4 text-left text-slate-400">Total Transaksi</th>
               <th className="p-4 text-left text-slate-400">Laba Kotor</th>
+              <th className="p-4 text-right text-slate-400">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -1111,8 +1399,28 @@ const Reports = ({ transactions, expenses }) => {
                     <td className="p-4 text-sm text-slate-200">{t.transaction_id}</td>
                     <td className="p-4 text-sm text-white font-medium">{t.customer_name}</td>
                     <td className="p-4 text-sm text-slate-400">{t.items.length} Item</td>
-                    <td className="p-4 text-sm text-amber-400 font-bold">Rp {t.total_amount.toLocaleString()}</td>
-                    <td className="p-4 text-sm text-green-400 font-bold">+ Rp {Math.round(trxProfit).toLocaleString()}</td>
+                    <td className="p-4 text-sm text-amber-400 font-bold">Rp {Number(t.total_amount).toLocaleString('id-ID')}</td>
+                    <td className="p-4 text-sm text-green-400 font-bold">+ Rp {Math.round(trxProfit).toLocaleString('id-ID')}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => downloadInvoiceImage(t)} className="p-2 text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Unduh Gambar Invoice">
+                          <Download size={16} />
+                        </button>
+                        <button onClick={() => printInvoice(t)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Cetak Struk Kertas">
+                          <Printer size={16} />
+                        </button>
+                        {user?.role?.toLowerCase() === 'superadmin' && (
+                          <button onClick={async () => {
+                            if (confirm('Yakin ingin menghapus transaksi ini? (Stok akan dikembalikan)')) {
+                              await db.deleteTransaction(t.id);
+                              window.location.reload();
+                            }
+                          }} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Hapus Transaksi">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })
@@ -1205,7 +1513,7 @@ const Expenses = ({ supplies, expenses, onUpdate }) => {
                 <div key={exp.id} className="p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
                   <div className="flex justify-between mb-1">
                     <span className="text-sm font-bold text-white">{exp.category}</span>
-                    <span className="text-sm font-bold text-amber-500">Rp {Number(exp.amount).toLocaleString()}</span>
+                    <span className="text-sm font-bold text-amber-500">Rp {Number(exp.amount).toLocaleString('id-ID')}</span>
                   </div>
                   <p className="text-xs text-slate-400">{exp.description}</p>
                   <p className="text-[10px] text-slate-500 mt-1">{new Date(exp.date).toLocaleString('id-ID')}</p>
@@ -1289,6 +1597,110 @@ const Expenses = ({ supplies, expenses, onUpdate }) => {
   );
 };
 
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ id: '', username: '', password: '', role: 'Operator' });
+
+  const loadUsers = async () => {
+    const data = await db.getUsers();
+    setUsers(data);
+  };
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await db.saveUser(formData);
+    setShowModal(false);
+    loadUsers();
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Yakin ingin menghapus pengguna ini?')) {
+      await db.deleteUser(id);
+      loadUsers();
+    }
+  };
+
+  return (
+    <div className="fade-in">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold gold-text">Manajemen Pengguna</h1>
+        <button onClick={() => { setFormData({ id: '', username: '', password: '', role: 'Operator' }); setShowModal(true); }} className="btn btn-primary flex items-center gap-2 px-6">
+          <Plus size={18} /> Tambah Pengguna
+        </button>
+      </div>
+
+      <Card className="overflow-x-auto">
+        <table className="w-full" style={{ minWidth: '600px' }}>
+          <thead>
+            <tr>
+              <th className="p-4 text-left text-slate-400">Username</th>
+              <th className="p-4 text-left text-slate-400">Role</th>
+              <th className="p-4 text-right text-slate-400">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id} className="border-t border-slate-700/50">
+                <td className="p-4 text-sm text-white font-medium">{u.username}</td>
+                <td className="p-4 text-sm text-slate-400">
+                  <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold ${u.role?.toLowerCase() === 'superadmin' ? 'bg-amber-500/20 text-amber-500' : 'bg-blue-500/20 text-blue-500'}`}>
+                    {u.role}
+                  </span>
+                </td>
+                <td className="p-4 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => { setFormData({ id: u.id, username: u.username, password: '', role: u.role }); setShowModal(true); }} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(u.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {showModal && (
+        <div className="modal-overlay z-1000" style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <div className="glass" style={{ width: '600px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: '2.5rem', borderRadius: '16px', position: 'relative' }}>
+            <h2 className="text-2xl font-bold mb-6">{formData.id ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Username</label>
+                  <input required type="text" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Password {formData.id && '(Kosongkan jika tidak ubah)'}</label>
+                  <input required={!formData.id} type="password" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Role</label>
+                  <select className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-500" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                    <option value="Operator">Operator</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Superadmin">Superadmin</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-700/50">
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline px-6 py-2">Batal</button>
+                <button type="submit" className="btn btn-primary px-6 py-2">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -1296,11 +1708,19 @@ export default function App() {
     const savedUser = localStorage.getItem('aurasense_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [showLogin, setShowLogin] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('aurasense_active_tab') || 'dashboard';
+  });
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [supplies, setSupplies] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('aurasense_active_tab', activeTab);
+  }, [activeTab]);
 
   const refreshData = async () => {
     const p = await db.getProducts();
@@ -1329,14 +1749,31 @@ export default function App() {
     localStorage.removeItem('aurasense_user');
   };
 
-  if (!user) {
-    return <Login onLogin={handleLogin} />;
+  if (!user && !showLogin) {
+    return <PublicStore onBack={() => setShowLogin(true)} />;
+  }
+
+  if (!user && showLogin) {
+    return <Login onLogin={handleLogin} onBackToStore={() => setShowLogin(false)} />;
   }
 
   return (
     <div className="app-container">
-      <aside className="sidebar premium-gradient" style={{ position: 'fixed', left: '0px', top: '0px', bottom: '0px', width: '260px', padding: '30px 20px', boxSizing: 'border-box', zIndex: 100, overflow: 'hidden' }}>
-        <div style={{ margin: '0 0 32px 0', padding: '0 16px' }}>
+      {/* Mobile Header */}
+      <div className="mobile-header">
+         <div className="flex items-center gap-2">
+            <img src="/logo aurasense.png" alt="Logo" className="w-8 h-8 object-contain" />
+            <h1 className="text-lg font-bold gold-text" style={{ margin: 0 }}>AURASENSE</h1>
+         </div>
+         <button onClick={() => setIsSidebarOpen(true)} className="text-white p-2">
+            <Menu size={24} />
+         </button>
+      </div>
+
+      <div className={`overlay-bg ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
+
+      <aside className={`sidebar premium-gradient ${isSidebarOpen ? 'open' : ''}`} style={{ position: 'fixed', left: '0px', top: '0px', bottom: '0px', width: '260px', padding: '30px 20px', boxSizing: 'border-box', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ margin: '0 0 32px 0', padding: '0 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 8px 0' }}>
             <img src="/logo aurasense.png" alt="Aurasense Icon" style={{ width: '40px', height: '40px', objectFit: 'contain', margin: '0', flexShrink: 0 }} />
             <h1 className="text-2xl font-bold tracking-tighter gold-text" style={{ margin: 0, padding: 0 }}>AURASENSE</h1>
@@ -1344,62 +1781,61 @@ export default function App() {
           <p className="text-[10px] text-slate-500 tracking-[0.3em] font-bold uppercase" style={{ margin: '0 0 0 52px', padding: 0 }}>DECANT PARFUM PREMIUM</p>
         </div>
 
-        <nav className="custom-scrollbar" style={{ overflowY: 'auto', padding: '0 8px', margin: 0, height: 'calc(100vh - 280px)' }}>
+        <nav className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 8px', margin: 0, minHeight: 0 }}>
           <SidebarItem 
             icon={LayoutDashboard} 
             label="Dashboard" 
             active={activeTab === 'dashboard'} 
-            onClick={() => setActiveTab('dashboard')} 
-          />
-          <SidebarItem 
-            icon={Database} 
-            label="Data Produk" 
-            active={activeTab === 'master'} 
-            onClick={() => setActiveTab('master')} 
-          />
-          <SidebarItem 
-            icon={Inbox} 
-            label="Barang Masuk" 
-            active={activeTab === 'incoming'} 
-            onClick={() => setActiveTab('incoming')} 
-          />
-          <SidebarItem 
-            icon={Package} 
-            label="Stok Barang" 
-            active={activeTab === 'inventory'} 
-            onClick={() => setActiveTab('inventory')} 
-          />
-          <SidebarItem 
-            icon={Wallet} 
-            label="Pengeluaran & Supply" 
-            active={activeTab === 'expenses'} 
-            onClick={() => setActiveTab('expenses')} 
+            onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} 
           />
           <SidebarItem 
             icon={ShoppingCart} 
             label="Penjualan" 
             active={activeTab === 'pos'} 
-            onClick={() => setActiveTab('pos')} 
+            onClick={() => { setActiveTab('pos'); setIsSidebarOpen(false); }} 
+          />
+          <SidebarItem 
+            icon={Database} 
+            label="Data Produk" 
+            active={activeTab === 'master'} 
+            onClick={() => { setActiveTab('master'); setIsSidebarOpen(false); }} 
+          />
+          <SidebarItem 
+            icon={Inbox} 
+            label="Barang Masuk" 
+            active={activeTab === 'incoming'} 
+            onClick={() => { setActiveTab('incoming'); setIsSidebarOpen(false); }} 
+          />
+          <SidebarItem 
+            icon={Package} 
+            label="Stok Barang" 
+            active={activeTab === 'inventory'} 
+            onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }} 
+          />
+          <SidebarItem 
+            icon={Wallet} 
+            label="Pengeluaran & Supply" 
+            active={activeTab === 'expenses'} 
+            onClick={() => { setActiveTab('expenses'); setIsSidebarOpen(false); }} 
           />
           <SidebarItem 
             icon={BarChart3} 
             label="Laporan" 
             active={activeTab === 'reports'} 
-            onClick={() => setActiveTab('reports')} 
+            onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }} 
           />
+          {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin') && (
+            <SidebarItem 
+              icon={Users} 
+              label="Data Pengguna" 
+              active={activeTab === 'users'} 
+              onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }} 
+            />
+          )}
         </nav>
 
-        <div style={{ position: 'absolute', bottom: '32px', left: '20px', right: '20px', margin: 0, padding: '0 8px' }}>
-          <button 
-            onClick={handleLogout}
-            style={{ background: 'transparent', border: 'none', width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', margin: '0 0 16px 0', cursor: 'pointer' }}
-            className="text-red-500 hover:bg-red-500/10 rounded-xl transition-all text-sm font-bold"
-          >
-            <LogOut size={18} style={{ margin: 0, flexShrink: 0 }} />
-            <span style={{ margin: 0, padding: 0 }}>Keluar Sistem</span>
-          </button>
-          
-          <div className="glass rounded-2xl" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', margin: 0 }}>
+        <div style={{ flexShrink: 0, marginTop: '16px', padding: '0 8px' }}>
+          <div className="glass rounded-2xl" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', margin: '0 0 16px 0' }}>
             <div className="bg-amber-500/10 text-amber-500" style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, margin: 0 }}>
               <User size={20} />
             </div>
@@ -1408,6 +1844,15 @@ export default function App() {
               <p className="text-[10px] text-slate-500 uppercase truncate" style={{ margin: 0, padding: 0 }}>{user.role}</p>
             </div>
           </div>
+          
+          <button 
+            onClick={handleLogout}
+            style={{ background: 'transparent', border: 'none', width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', margin: 0, cursor: 'pointer' }}
+            className="text-red-500 hover:bg-red-500/10 rounded-xl transition-all text-sm font-bold"
+          >
+            <LogOut size={18} style={{ margin: 0, flexShrink: 0 }} />
+            <span style={{ margin: 0, padding: 0 }}>Keluar Sistem</span>
+          </button>
         </div>
       </aside>
 
@@ -1416,10 +1861,11 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard products={products} transactions={transactions} supplies={supplies} key="dash" />}
           {activeTab === 'master' && <MasterProduct products={products} onUpdate={refreshData} key="master" />}
           {activeTab === 'incoming' && <IncomingItems products={products} onUpdate={refreshData} key="inc" />}
-          {activeTab === 'inventory' && <Inventory products={products} key="inv" />}
+          {activeTab === 'inventory' && <Inventory products={products} onUpdate={refreshData} user={user} key="inv" />}
           {activeTab === 'expenses' && <Expenses supplies={supplies} expenses={expenses} onUpdate={refreshData} key="exp" />}
           {activeTab === 'pos' && <POS products={products} supplies={supplies} onSale={refreshData} key="pos" />}
-          {activeTab === 'reports' && <Reports transactions={transactions} expenses={expenses} key="rep" />}
+          {activeTab === 'reports' && <Reports transactions={transactions} expenses={expenses} user={user} key="rep" />}
+          {activeTab === 'users' && <UserManagement key="users" />}
         </AnimatePresence>
       </main>
     </div>

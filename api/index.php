@@ -52,6 +52,38 @@ try {
         }
     }
 
+    // === USERS ===
+    elseif ($method === 'GET' && $path === '/users') {
+        $stmt = $pdo->query('SELECT id, username, role FROM users');
+        jsonResponse($stmt->fetchAll());
+    }
+    elseif ($method === 'POST' && $path === '/users') {
+        $stmt = $pdo->prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
+        $stmt->execute([
+            $input['username'] ?? '',
+            $input['password'] ?? '',
+            $input['role'] ?? 'Operator'
+        ]);
+        jsonResponse(['success' => true]);
+    }
+    elseif ($method === 'PUT' && preg_match('/^\/users\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        if (!empty($input['password'])) {
+            $stmt = $pdo->prepare('UPDATE users SET username=?, password=?, role=? WHERE id=?');
+            $stmt->execute([$input['username'] ?? '', $input['password'], $input['role'] ?? 'Operator', $id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE users SET username=?, role=? WHERE id=?');
+            $stmt->execute([$input['username'] ?? '', $input['role'] ?? 'Operator', $id]);
+        }
+        jsonResponse(['success' => true]);
+    }
+    elseif ($method === 'DELETE' && preg_match('/^\/users\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        jsonResponse(['success' => true]);
+    }
+
     // === UPLOAD ===
     elseif ($method === 'POST' && $path === '/upload') {
         if (!isset($_FILES['image'])) {
@@ -79,6 +111,11 @@ try {
 
     // === PRODUCTS ===
     elseif ($method === 'GET' && $path === '/products') {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN is_active TINYINT(1) DEFAULT 1");
+        } catch (Exception $e) {
+            // Column already exists or other error, ignore
+        }
         $stmt = $pdo->query('SELECT * FROM products');
         $products = $stmt->fetchAll();
         foreach ($products as &$p) {
@@ -89,26 +126,28 @@ try {
     elseif ($method === 'POST' && $path === '/products') {
         $id = !empty($input['id']) ? $input['id'] : 'PRD' . substr((string)time(), -4);
         $prices = isset($input['prices']) ? json_encode($input['prices']) : '[]';
+        $is_active = isset($input['is_active']) ? $input['is_active'] : 1;
         
-        $stmt = $pdo->prepare("INSERT INTO products (id, brand, variant, category, bottle_capacity, stock_ml, image, note, prices, capital_price, barcode, aroma_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO products (id, brand, variant, category, bottle_capacity, stock_ml, image, note, prices, capital_price, barcode, aroma_category, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $id, $input['brand'] ?? '', $input['variant'] ?? '', $input['category'] ?? '', 
             $input['bottle_capacity'] ?? null, $input['stock_ml'] ?? 0, $input['image'] ?? '', 
             $input['note'] ?? '', $prices, $input['capital_price'] ?? 0, 
-            $input['barcode'] ?? '', $input['aroma_category'] ?? ''
+            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $is_active
         ]);
         jsonResponse(['success' => true]);
     }
     elseif ($method === 'PUT' && preg_match('/^\/products\/(.+)$/', $path, $matches)) {
         $id = $matches[1];
         $prices = isset($input['prices']) ? json_encode($input['prices']) : '[]';
+        $is_active = isset($input['is_active']) ? $input['is_active'] : 1;
         
-        $stmt = $pdo->prepare("UPDATE products SET brand=?, variant=?, category=?, bottle_capacity=?, stock_ml=?, image=?, note=?, prices=?, capital_price=?, barcode=?, aroma_category=? WHERE id=?");
+        $stmt = $pdo->prepare("UPDATE products SET brand=?, variant=?, category=?, bottle_capacity=?, stock_ml=?, image=?, note=?, prices=?, capital_price=?, barcode=?, aroma_category=?, is_active=? WHERE id=?");
         $stmt->execute([
             $input['brand'] ?? '', $input['variant'] ?? '', $input['category'] ?? '', 
             $input['bottle_capacity'] ?? null, $input['stock_ml'] ?? 0, $input['image'] ?? '', 
             $input['note'] ?? '', $prices, $input['capital_price'] ?? 0, 
-            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $id
+            $input['barcode'] ?? '', $input['aroma_category'] ?? '', $is_active, $id
         ]);
         jsonResponse(['success' => true]);
     }
@@ -127,6 +166,39 @@ try {
             $t['items'] = is_string($t['items']) ? json_decode($t['items'], true) : $t['items'];
         }
         jsonResponse($transactions);
+    }
+    elseif ($method === 'DELETE' && preg_match('/^\/transactions\/(.+)$/', $path, $matches)) {
+        $id = $matches[1];
+        
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("SELECT * FROM transactions WHERE id = ?");
+        $stmt->execute([$id]);
+        $transaction = $stmt->fetch();
+        
+        if ($transaction) {
+            $items = is_string($transaction['items']) ? json_decode($transaction['items'], true) : [];
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $qty = $item['quantity'] ?? 1;
+                    $size = $item['selected_size'] ?? 1;
+                    $total_ml = $qty * $size;
+                    
+                    $stmtUpdate = $pdo->prepare('UPDATE products SET stock_ml = stock_ml + ? WHERE id = ?');
+                    $stmtUpdate->execute([$total_ml, $item['id']]);
+                    
+                    $stmtUpdateSup = $pdo->prepare('UPDATE supplies SET stock_qty = stock_qty + ? WHERE type = "botol" AND size_ml = ?');
+                    $stmtUpdateSup->execute([$qty, $size]);
+                }
+            }
+            $pdo->exec('UPDATE supplies SET stock_qty = stock_qty + 1 WHERE id IN ("SUP_PLSTK", "SUP_STIKER")');
+            
+            $stmtDel = $pdo->prepare("DELETE FROM transactions WHERE id = ?");
+            $stmtDel->execute([$id]);
+        }
+        
+        $pdo->commit();
+        jsonResponse(['success' => true]);
     }
     elseif ($method === 'POST' && $path === '/transactions') {
         $transaction = $input;

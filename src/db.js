@@ -14,6 +14,39 @@ export const db = {
       return { success: false, message: 'Server error' };
     }
   },
+  getUsers: async () => {
+    try {
+      const response = await fetch(`${API_URL}/users`);
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to get users:', err);
+      return [];
+    }
+  },
+  saveUser: async (user) => {
+    try {
+      const url = user.id ? `${API_URL}/users/${user.id}` : `${API_URL}/users`;
+      const method = user.id ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      });
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to save user:', err);
+      return { success: false, error: err.message };
+    }
+  },
+  deleteUser: async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/users/${id}`, { method: 'DELETE' });
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      return { success: false, error: err.message };
+    }
+  },
   getProducts: async () => {
     try {
       const response = await fetch(`${API_URL}/products`);
@@ -43,6 +76,15 @@ export const db = {
     } catch (err) {
       console.error('Failed to save transaction:', err);
       return { success: false };
+    }
+  },
+  deleteTransaction: async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE' });
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to delete transaction:', err);
+      return { success: false, error: err.message };
     }
   },
   uploadImage: async (file) => {

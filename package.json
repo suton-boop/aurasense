@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "vite build && node -e \"const fs=require('fs'); fs.cpSync('api', 'dist/api', {recursive: true})\" && gh-pages -d dist -b deployment"
+    "deploy": "vite build && node -e \"const fs=require('fs'); fs.cpSync('api', 'dist/api', {recursive: true})\" && gh-pages -d dist -b deployment --dotfiles"
   },
   "dependencies": {
     "framer-motion": "^12.38.0",
