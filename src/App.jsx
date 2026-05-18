@@ -907,6 +907,12 @@ const POS = ({ products, supplies, onSale }) => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [lastInvoice, setLastInvoice] = useState(null);
   const [selectedSizes, setSelectedSizes] = useState({}); // Tracking selected size per product card
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const handleSizeChange = (productId, size) => {
     setSelectedSizes({ ...selectedSizes, [productId]: size });
@@ -953,6 +959,7 @@ const POS = ({ products, supplies, onSale }) => {
     } else {
       setCart([...cart, { ...product, cartKey, selected_size: size, price, quantity: 1 }]);
     }
+    showNotification(`${product.variant} (${size}ml) ditambahkan ke keranjang!`);
   };
 
   const removeFromCart = (cartKey) => {
@@ -1005,6 +1012,14 @@ const POS = ({ products, supplies, onSale }) => {
 
   return (
     <div className="flex gap-6 h-pos fade-in relative">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm fade-in flex items-center gap-2">
+          <ShoppingCart size={16} />
+          {notification}
+        </div>
+      )}
+
       {/* Mobile Sticky Cart Button */}
       {cart.length > 0 && (
         <div className="mobile-cart-sticky">

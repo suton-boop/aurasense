@@ -10,6 +10,12 @@ export default function PublicStore({ onBack }) {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState({});
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -37,6 +43,7 @@ export default function PublicStore({ onBack }) {
     } else {
       setCart([...cart, { ...product, selected_size: size, price, quantity: 1, cartKey }]);
     }
+    showNotification(`${product.variant} (${size}ml) ditambahkan ke keranjang!`);
   };
 
   const removeFromCart = (cartKey) => {
@@ -58,7 +65,15 @@ export default function PublicStore({ onBack }) {
   };
 
   return (
-    <div className="flex flex-col-reverse md:flex-row gap-6 p-4 md:p-8 min-h-screen bg-[#0f172a] text-white fade-in">
+    <div className="flex flex-col-reverse md:flex-row gap-6 p-4 md:p-8 min-h-screen bg-[#0f172a] text-white fade-in relative">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm fade-in flex items-center gap-2">
+          <ShoppingCart size={16} />
+          {notification}
+        </div>
+      )}
+
       {/* Mobile Sticky Cart */}
       {cart.length > 0 && (
         <div className="mobile-cart-sticky block md:hidden z-50 fixed bottom-4 left-4 right-4">
