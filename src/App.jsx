@@ -466,7 +466,7 @@ const MasterProduct = ({ products, onUpdate }) => {
   const handleOpenAdd = () => {
     const newId = 'PRD' + Date.now().toString().slice(-4);
     setEditingId(null);
-    setFormData({ id: newId, brand: '', variant: '', category: 'EDP', bottle_capacity: 100, stock_ml: 0, image: '', note: '', price_2: 0, price_3: 0, price_5: 0, price_7: 0, price_10: 0, capital_price: 0, barcode: '', aroma_category: '', is_active: 1 });
+    setFormData({ id: newId, brand: '', variant: '', category: 'EDP', bottle_capacity: 100, stock_ml: 0, image: '', note: '', price_1: 0, price_2: 0, price_3: 0, price_5: 0, price_7: 0, price_10: 0, capital_price: 0, barcode: '', aroma_category: '', is_active: 1 });
     setShowModal(true);
   };
 
@@ -498,7 +498,7 @@ const MasterProduct = ({ products, onUpdate }) => {
     setEditingId(p.id);
     setFormData({
       id: p.id, brand: p.brand || '', variant: p.variant || '', category: p.category || '', bottle_capacity: p.bottle_capacity || 100, stock_ml: p.stock_ml || 0, image: p.image || '', note: p.note || '',
-      price_2: p.prices?.[2] || 0, price_3: p.prices?.[3] || 0, price_5: p.prices?.[5] || 0, price_7: p.prices?.[7] || 0, price_10: p.prices?.[10] || 0,
+      price_1: p.prices?.[1] || 0, price_2: p.prices?.[2] || 0, price_3: p.prices?.[3] || 0, price_5: p.prices?.[5] || 0, price_7: p.prices?.[7] || 0, price_10: p.prices?.[10] || 0,
       capital_price: p.capital_price || 0, barcode: p.barcode || '', aroma_category: p.aroma_category || '', is_active: p.is_active !== undefined ? Number(p.is_active) : 1
     });
     setShowModal(true);
@@ -531,7 +531,7 @@ const MasterProduct = ({ products, onUpdate }) => {
     e.preventDefault();
     const payload = {
       id: formData.id, brand: formData.brand, variant: formData.variant, category: formData.category, bottle_capacity: Number(formData.bottle_capacity), stock_ml: Number(formData.stock_ml), image: formData.image, note: formData.note,
-      prices: { 2: Number(formData.price_2), 3: Number(formData.price_3), 5: Number(formData.price_5), 7: Number(formData.price_7), 10: Number(formData.price_10) },
+      prices: { 1: Number(formData.price_1), 2: Number(formData.price_2), 3: Number(formData.price_3), 5: Number(formData.price_5), 7: Number(formData.price_7), 10: Number(formData.price_10) },
       capital_price: Number(formData.capital_price), barcode: formData.barcode, aroma_category: formData.aroma_category, is_active: formData.is_active
     };
 
@@ -671,7 +671,8 @@ const MasterProduct = ({ products, onUpdate }) => {
 
               <div className="mt-4">
                 <label className="text-xs text-slate-400 block mb-1">Harga Jual Decant (Rp)</label>
-                <div className="grid grid-cols-5 gap-2 mt-2">
+                <div className="grid grid-cols-6 gap-2 mt-2">
+                  <div><span className="text-10 text-slate-500 block mb-1 text-center">1ml</span><input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-white text-center" value={formData.price_1} onChange={e => setFormData({...formData, price_1: e.target.value})} /></div>
                   <div><span className="text-10 text-slate-500 block mb-1 text-center">2ml</span><input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-white text-center" value={formData.price_2} onChange={e => setFormData({...formData, price_2: e.target.value})} /></div>
                   <div><span className="text-10 text-slate-500 block mb-1 text-center">3ml</span><input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-white text-center" value={formData.price_3} onChange={e => setFormData({...formData, price_3: e.target.value})} /></div>
                   <div><span className="text-10 text-slate-500 block mb-1 text-center">5ml</span><input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-white text-center" value={formData.price_5} onChange={e => setFormData({...formData, price_5: e.target.value})} /></div>
@@ -924,7 +925,7 @@ const POS = ({ products, supplies, onSale }) => {
       return;
     }
     
-    const availableSizes = product.prices ? ['2', '3', '5', '7', '10'].filter(s => Number(product.prices[s]) > 0) : [];
+    const availableSizes = product.prices ? ['1', '2', '3', '5', '7', '10'].filter(s => Number(product.prices[s]) > 0) : [];
     const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
     const size = selectedSizes[product.id] || defaultSize;
     const price = product.prices[size] || 0;
@@ -1046,10 +1047,10 @@ const POS = ({ products, supplies, onSale }) => {
                 <div className="space-y-2 mb-4">
                   <p className="text-10 text-slate-500 font-bold uppercase">Pilih Ukuran:</p>
                   <div className="grid grid-cols-3 gap-1">
-                    {p.prices && ['2', '3', '5', '7', '10']
+                    {p.prices && ['1', '2', '3', '5', '7', '10']
                       .filter(size => Number(p.prices[size]) > 0)
                       .map(size => {
-                        const availableSizes = ['2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0);
+                        const availableSizes = ['1', '2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0);
                         const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
                         const isSelected = (selectedSizes[p.id] || defaultSize) === Number(size);
                         
@@ -1071,7 +1072,7 @@ const POS = ({ products, supplies, onSale }) => {
                 </div>
 
                 {(() => {
-                  const availableSizes = p.prices ? ['2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0) : [];
+                  const availableSizes = p.prices ? ['1', '2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0) : [];
                   const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
                   const currentSize = selectedSizes[p.id] || defaultSize;
                   const currentPrice = p.prices ? (p.prices[currentSize] || 0) : 0;

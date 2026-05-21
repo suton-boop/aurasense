@@ -30,7 +30,7 @@ export default function PublicStore({ onBack }) {
   };
 
   const addToCart = (product) => {
-    const availableSizes = product.prices ? ['2', '3', '5', '7', '10'].filter(s => Number(product.prices[s]) > 0) : [];
+    const availableSizes = product.prices ? ['1', '2', '3', '5', '7', '10'].filter(s => Number(product.prices[s]) > 0) : [];
     const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
     const size = selectedSizes[product.id] || defaultSize;
     const price = product.prices[size] || 0;
@@ -115,10 +115,10 @@ export default function PublicStore({ onBack }) {
                 <div className="space-y-2 mb-4">
                   <p className="text-[10px] text-slate-500 font-bold uppercase">Pilih Ukuran:</p>
                   <div className="grid grid-cols-3 gap-1">
-                    {p.prices && ['2', '3', '5', '7', '10']
+                    {p.prices && ['1', '2', '3', '5', '7', '10']
                       .filter(size => Number(p.prices[size]) > 0)
                       .map(size => {
-                        const availableSizes = ['2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0);
+                        const availableSizes = ['1', '2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0);
                         const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
                         const isSelected = (selectedSizes[p.id] || defaultSize) === Number(size);
                         
@@ -140,7 +140,7 @@ export default function PublicStore({ onBack }) {
                 </div>
 
                 {(() => {
-                  const availableSizes = p.prices ? ['2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0) : [];
+                  const availableSizes = p.prices ? ['1', '2', '3', '5', '7', '10'].filter(s => Number(p.prices[s]) > 0) : [];
                   const defaultSize = availableSizes.length > 0 ? Number(availableSizes[0]) : 2;
                   const currentSize = selectedSizes[p.id] || defaultSize;
                   const currentPrice = p.prices ? (p.prices[currentSize] || 0) : 0;
