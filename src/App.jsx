@@ -497,9 +497,9 @@ const MasterProduct = ({ products, onUpdate }) => {
   const handleOpenEdit = (p) => {
     setEditingId(p.id);
     setFormData({
-      id: p.id, brand: p.brand || '', variant: p.variant || '', category: p.category || '', bottle_capacity: p.bottle_capacity || 100, stock_ml: p.stock_ml || 0, image: p.image || '', note: p.note || '',
+      id: p.id, brand: p.brand || '', variant: p.variant || '', category: p.category || '', bottle_capacity: p.bottle_capacity || 100, stock_ml: parseInt(p.stock_ml || 0), image: p.image || '', note: p.note || '',
       price_1: p.prices?.[1] || 0, price_2: p.prices?.[2] || 0, price_3: p.prices?.[3] || 0, price_5: p.prices?.[5] || 0, price_7: p.prices?.[7] || 0, price_10: p.prices?.[10] || 0,
-      capital_price: p.capital_price || 0, barcode: p.barcode || '', aroma_category: p.aroma_category || '', is_active: p.is_active !== undefined ? Number(p.is_active) : 1
+      capital_price: parseInt(p.capital_price || 0), barcode: p.barcode || '', aroma_category: p.aroma_category || '', is_active: p.is_active !== undefined ? Number(p.is_active) : 1
     });
     setShowModal(true);
   };
@@ -646,7 +646,7 @@ const MasterProduct = ({ products, onUpdate }) => {
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Stok Awal (ml)</label>
-                  <input required type="number" step="0.1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white" value={formData.stock_ml} onChange={e => setFormData({...formData, stock_ml: e.target.value})} />
+                  <input required type="number" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white" value={formData.stock_ml} onChange={e => setFormData({...formData, stock_ml: e.target.value})} />
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Status Penjualan (Tampil di Kasir)</label>
