@@ -1333,12 +1333,12 @@ const Reports = ({ transactions, expenses, user }) => {
           <select 
             value={filterType} 
             onChange={(e) => setFilterType(e.target.value)}
-            className="bg-transparent text-white text-sm outline-none cursor-pointer"
+            className="bg-white text-slate-900 text-sm outline-none cursor-pointer p-1.5 rounded"
           >
-            <option value="all" className="bg-slate-800">Semua Waktu</option>
-            <option value="daily" className="bg-slate-800">Hari Ini</option>
-            <option value="monthly" className="bg-slate-800">Bulan Ini</option>
-            <option value="custom" className="bg-slate-800">Pilih Tanggal</option>
+            <option value="all">Semua Waktu</option>
+            <option value="daily">Hari Ini</option>
+            <option value="monthly">Bulan Ini</option>
+            <option value="custom">Pilih Tanggal</option>
           </select>
           
           {filterType === 'custom' && (
@@ -1347,14 +1347,14 @@ const Reports = ({ transactions, expenses, user }) => {
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-slate-700 text-white text-xs p-2 rounded outline-none"
+                className="bg-white text-slate-900 text-xs p-1.5 rounded outline-none"
               />
               <span className="text-slate-400">-</span>
               <input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-slate-700 text-white text-xs p-2 rounded outline-none"
+                className="bg-white text-slate-900 text-xs p-1.5 rounded outline-none"
               />
             </div>
           )}
