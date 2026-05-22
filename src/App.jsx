@@ -785,7 +785,7 @@ const IncomingItems = ({ products, onUpdate }) => {
               </div>
               <div>
                 <label className="text-xs text-slate-400 block mb-1">Jumlah Stok Masuk (ml)</label>
-                <input required type="number" step="0.1" min="0.1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white" value={addStock} onChange={e => setAddStock(e.target.value)} />
+                <input required type="number" min="1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white" value={addStock} onChange={e => setAddStock(e.target.value)} />
               </div>
 
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-700/50">

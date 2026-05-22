@@ -65,7 +65,7 @@ export default function PublicStore({ onBack }) {
   };
 
   return (
-    <div className="flex flex-col-reverse md:flex-row gap-6 p-4 md:p-8 min-h-screen bg-[#0f172a] text-white fade-in relative">
+    <div className="flex flex-col md:flex-row gap-6 p-4 md:p-8 min-h-screen bg-[#0f172a] text-white fade-in relative">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm fade-in flex items-center gap-2">
