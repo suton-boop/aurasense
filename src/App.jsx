@@ -1309,7 +1309,7 @@ const Reports = ({ transactions, expenses, user }) => {
   const filteredExpenses = expenses.filter(e => isWithinDateRange(e.timestamp));
 
   // Calculate Totals
-  const totalRevenue = filteredTransactions.reduce((sum, t) => sum + t.items.reduce((acc, item) => acc + (item.price * item.quantity), 0), 0);
+  const totalRevenue = filteredTransactions.reduce((sum, t) => sum + (t.items || []).reduce((acc, item) => acc + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0), 0);
   
   const totalCOGS = filteredTransactions.reduce((sum, t) => {
     return sum + t.items.reduce((acc, item) => {
@@ -1403,8 +1403,8 @@ const Reports = ({ transactions, expenses, user }) => {
               </tr>
             ) : (
               filteredTransactions.slice().reverse().map(t => {
-                const trxRevenue = t.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                const trxCOGS = t.items.reduce((acc, item) => {
+                const trxRevenue = (t.items || []).reduce((acc, item) => acc + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0);
+                const trxCOGS = (t.items || []).reduce((acc, item) => {
                   const capPrice = Number(item.capital_price) || 0;
                   const capacity = Number(item.bottle_capacity) || 100;
                   const mlSold = Number(item.selected_size) * Number(item.quantity);
